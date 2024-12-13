@@ -1,8 +1,5 @@
 # Ensure the script is run as Administrator
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole("Administrator")) {
-    Write-Host "You must run this script as an Administrator." -ForegroundColor Red
-    exit 1
-}
+
 
 # Check if running on Windows Server
 try {
