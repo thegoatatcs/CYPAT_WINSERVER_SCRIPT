@@ -1,36 +1,231 @@
-# Define the list of file extensions to search for
-$extensions = @("aac", "ac3", "avi", "aiff", "bat", "bmp", "exe", "flac", "gif", "jpeg", "jpg", "mov", "m3u", "m4p",
-                "mp2", "mp3", "mp4", "mpeg4", "midi", "msi", "ogg", "png", "txt", "sh", "wav", "wma", "vqf")
 
-# Define the list of tool names to search for
-$tools = @("Cain", "nmap", "keylogger", "Armitage", "Wireshark", "Metasploit", "netcat")
-
-# Define the path to the log file
-$logFile = "C:\Logs\FileLog.txt"
-
-# Get all user directories under C:\Users
-$userDirectories = Get-ChildItem -Path "C:\Users" -Directory
-
-# Search for files with the specified extensions and tool names
-foreach ($dir in $userDirectories) {
-    # Search for files with specified extensions
-    foreach ($ext in $extensions) {
-        $files = Get-ChildItem -Path $dir.FullName -Filter "*.$ext" -Recurse -Force -ErrorAction SilentlyContinue
-        foreach ($file in $files) {
-            # Write the file path to the log file
-            Add-Content -Value $file.FullName -Path $logFile
-        }
-    }
-    
-    # Search for files that include tool names
-    foreach ($tool in $tools) {
-        $files = Get-ChildItem -Path $dir.FullName -Filter "*$tool*" -Recurse -Force -ErrorAction SilentlyContinue
-        foreach ($file in $files) {
-            # Write the file path to the log file
-            Add-Content -Value $file.FullName -Path $logFile
-        }
-    }
+# Check for administrator privileges
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+	Write-Error "You need to run this script as an Administrator."
+	exit
 }
 
-# Output completion message
-Write-Host "File search completed and logged to $logFile."
+# Check if Active Directory module is available
+if (-not (Get-Module -ListAvailable -Name ActiveDirectory)) {
+	Write-Warning "Active Directory module not found. Proceeding with local user management."
+}
+
+# Define the path to the users.txt file
+$usersFilePath = "C:\Scripts\users.txt"
+
+# Define the whitelist of users to ignore
+$whitelist = @("Administrator", "Guest", "DefaultAccount", "WDAGUtilityAccount")
+
+# Define log file path
+$logDirectory = "C:\Logs"
+$LogFilePath = "$logDirectory\SecurityAuditLog.txt"
+
+# Ensure log directory exists
+if (-not (Test-Path $logDirectory)) {
+	New-Item -ItemType Directory -Path $logDirectory | Out-Null
+}
+
+# Function to append text to the log file
+function Write-ToLog {
+	param ([string]$Text)
+	Add-Content -Path $LogFilePath -Value $Text
+}
+
+# Log initialization
+Write-ToLog "\nSecurity Audit Log - $(Get-Date)\n"
+
+# Log SMB Shares
+Write-ToLog "----- SMB Shares -----"
+$smbShares = Get-SmbShare
+if ($smbShares.Count -eq 0) {
+	Write-ToLog "No SMB Shares found."
+} else {
+	$smbShares | ForEach-Object {
+    	Write-ToLog $_.Name
+	}
+}
+
+# Log Elevated Privileges
+Write-ToLog "----- Users with Elevated Privileges -----"
+$usersWithAdmin = Get-LocalGroupMember -Group "Administrators" | Select-Object -ExpandProperty Name
+foreach ($user in $usersWithAdmin) {
+	Write-ToLog $user
+}
+
+# Additional Security Checks
+Write-ToLog "----- Unauthorized Scheduled Tasks -----"
+Get-ScheduledTask | Where-Object { $_.Principal.RunLevel -eq 'Highest' } | ForEach-Object {
+	Write-ToLog $_.TaskName
+}
+
+# Log inappropriate access to user directories
+Write-ToLog "----- Inappropriate User Access to Other User Directories -----"
+$userProfiles = Get-ChildItem C:\Users -Directory
+foreach ($profile in $userProfiles) {
+	$userDir = $profile.FullName
+	$acl = Get-Acl $userDir
+	foreach ($access in $acl.Access) {
+    	if ($access.FileSystemRights -like "*FullControl*" -or $access.FileSystemRights -like "*Modify*") {
+        	if ($access.IdentityReference -notlike "BUILTIN\\Administrators" -and $access.IdentityReference -notlike "NT AUTHORITY\\SYSTEM" -and $access.IdentityReference -notlike $profile.Name) {
+            	$logEntry = "User $($access.IdentityReference) has $($access.FileSystemRights) access to $userDir"
+            	Write-ToLog $logEntry
+        	}
+    	}
+	}
+}
+
+# Log ACLs of user directories
+Write-ToLog "----- ACLs of User Directories -----"
+$outputFile = "$logDirectory\USERACLS.txt"
+$userDirectories = Get-ChildItem -Path "C:\Users" -Directory
+foreach ($dir in $userDirectories) {
+	$acl = Get-Acl -Path $dir.FullName
+	$acl | Out-File -FilePath $outputFile -Append
+	Add-Content -Path $outputFile -Value "\n" # Add a new line for separation
+}
+
+# Scan for specific file extensions and tools
+Write-ToLog "----- File Search for Extensions and Tools -----"
+$extensions = @("aac", "ac3", "avi", "aiff", "bat", "bmp", "exe", "flac", "gif", "jpeg", "jpg", "mov", "m3u", "m4p",
+            	"mp2", "mp3", "mp4", "mpeg4", "midi", "msi", "ogg", "png", "txt", "sh", "wav", "wma", "vqf")
+$tools = @("Cain", "nmap", "keylogger", "Armitage", "Wireshark", "Metasploit", "netcat")
+
+foreach ($dir in $userDirectories) {
+	foreach ($ext in $extensions) {
+    	$files = Get-ChildItem -Path $dir.FullName -Filter "*.$ext" -Recurse -Force -ErrorAction SilentlyContinue
+    	foreach ($file in $files) {
+        	Write-ToLog "File Found: $($file.FullName)"
+    	}
+	}
+	foreach ($tool in $tools) {
+    	$files = Get-ChildItem -Path $dir.FullName -Filter "*$tool*" -Recurse -Force -ErrorAction SilentlyContinue
+    	foreach ($file in $files) {
+        	Write-ToLog "Potential Tool Found: $($file.FullName)"
+    	}
+	}
+}
+
+# Read the content of the users.txt file
+if (-not (Test-Path $usersFilePath)) {
+	Write-Error "The file $usersFilePath does not exist. Please provide a valid file path."
+	exit
+}
+
+$usersFileContent = Get-Content $usersFilePath
+
+# Initialize variables
+$authorizedAdmins = @()
+$authorizedUsers = @()
+$isInAdminSection = $false
+
+# Parse the file
+foreach ($line in $usersFileContent) {
+	if ($line -eq "Authorized Administrators:") {
+    	$isInAdminSection = $true
+    	continue
+	} elseif ($line -eq "Authorized Users:") {
+    	$isInAdminSection = $false
+    	continue
+	}
+
+	if ($isInAdminSection) {
+    	$authorizedAdmins += $line
+	} else {
+    	$authorizedUsers += $line
+	}
+}
+
+# Function to manage user account
+function Manage-UserAccount {
+	param (
+    	[string]$username,
+    	[boolean]$isAdmin
+	)
+
+	# Check if the user is in the whitelist
+	if ($username -in $whitelist) {
+    	Write-Host "User $username is in the whitelist and will be ignored."
+    	return
+	}
+
+	# Check if the user exists
+	$userExists = Get-LocalUser -Name $username -ErrorAction SilentlyContinue
+
+	# If user does not exist, create the user
+	if (-not $userExists) {
+    	Write-Host "Creating user $username..."
+    	New-LocalUser -Name $username -NoPassword -AccountNeverExpires -UserMayNotChangePassword
+    	Add-LocalGroupMember -Group "Users" -Member $username -ErrorAction SilentlyContinue
+	}
+
+	# Add or remove user from Administrators group
+	$adminGroup = Get-LocalGroup -Name "Administrators"
+	if ($isAdmin) {
+    	Add-LocalGroupMember -Group $adminGroup -Member $username -ErrorAction SilentlyContinue
+    	Write-Host "Added $username to Administrators group."
+	} else {
+    	Remove-LocalGroupMember -Group $adminGroup -Member $username -ErrorAction SilentlyContinue
+    	Write-Host "Removed $username from Administrators group."
+	}
+}
+
+# Get current local users
+$localUsers = Get-LocalUser
+
+# Remove unauthorized users
+foreach ($user in $localUsers) {
+	if (($user.Name -notin $authorizedUsers) -and ($user.Name -notin $authorizedAdmins) -and ($user.Name -notin $whitelist)) {
+    	try {
+        	Remove-LocalUser -Name $user.Name
+        	Write-Host "User $($user.Name) has been removed."
+    	} catch {
+        	Write-Host "Error removing user $($user.Name): $_"
+    	}
+	}
+}
+
+# Process authorized users and admins
+foreach ($admin in $authorizedAdmins) {
+	Manage-UserAccount -username $admin -isAdmin $true
+}
+
+foreach ($user in $authorizedUsers) {
+	Manage-UserAccount -username $user -isAdmin $false
+}
+
+# Update administrator passwords
+Write-Host "Changing passwords for all local users..."
+$Password = ConvertTo-SecureString "aPASSWORD12345!" -AsPlainText -Force
+$UserAccounts = Get-LocalUser
+
+foreach ($UserAccount in $UserAccounts) {
+	try {
+    	$UserAccount | Set-LocalUser -Password $Password
+    	Write-Host "Password for $($UserAccount.Name) has been changed."
+	} catch {
+    	Write-Host "Failed to change password for $($UserAccount.Name): $_"
+	}
+}
+
+# Rename and disable default accounts
+Write-Host "Renaming and disabling default accounts..."
+
+$newAdminName = "NewAdminName"
+$newGuestName = "NewGuestName"
+
+$adminAccount = Get-LocalUser -Name "Administrator" -ErrorAction SilentlyContinue
+if ($null -ne $adminAccount) {
+	Rename-LocalUser -Name "Administrator" -NewName $newAdminName
+	Disable-LocalUser -Name $newAdminName
+}
+
+$guestAccount = Get-LocalUser -Name "Guest" -ErrorAction SilentlyContinue
+if ($null -ne $guestAccount) {
+Rename-LocalUser -Name "Guest" -NewName $newGuestName
+	Disable-LocalUser -Name $newGuestName
+	Write-ToLog "Renamed and disabled the Guest account to $newGuestName."
+} else {
+	Write-ToLog "No default Guest account found to rename or disable."
+}
+
+Write-Host "Default account renaming and disabling completed."
