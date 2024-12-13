@@ -1,0 +1,164 @@
+TODO FOR SEMIS:
+implement the following powershell script
+
+function Enable-PSScriptBlockLogging
+{
+    $basePath = 'HKLM:\Software\Policies\Microsoft\Windows' +
+      '\PowerShell\ScriptBlockLogging'
+
+    if(-not (Test-Path $basePath))
+    {
+        $null = New-Item $basePath -Force
+    }
+
+    Set-ItemProperty $basePath -Name EnableScriptBlockLogging -Value "1"
+}
+
+signature scanning
+go through the following to learn defender security : https://github.com/Altoid0/MintKit/blob/master/PostExploitation/Invoke-NukeDefender.ps1
+    research ntfs stuff how to delete what is bad
+some more good stuff : https://gist.github.com/mackwage/08604751462126599d7e52f233490efe?permalink_comment_id=4028081
+ensure firewlal is not in passive mode
+find way to check/valudate file signatures and hashing and search for easy ways to find poisoned dlls or packages
+make sure important windows settings are covered
+come back to this for registry baseline : https://www.youtube.com/watch?v=7W_3wnjvj5c
+how to secure the network settings
+look into nessus tool??
+  examining configured GPOs on the challenge image or comparing default Windows folder permissions with those harvested during competition.
+make list of services that must be up and running before script
+  possbily blocking port 21 for ftp if not allowed or smth like that
+  secure various ports. learn how to use netstat -ano or other netstat tools to find network backdoors or bad ports)
+PRACTICE WITH THE EVENT VIEWER / ID LIST TO FIND IMPORTANT CHANGES
+
+
+This machine is hosting the internal company email and webmail server, utilizing a XAMPP (Apache, MariaDB, PHP) stack. RoundCube 1.6.5 is the webmail software running and does not need to be updated at this time. For the SMTP/IMAP/POP3 server, hMailServer is configured for the afa.com domain.
+
+
+MISSING FROM APERTURE:
+24, 28, 29, 30, 31, 33, 34, 35, 36, 52, 53, 61(get from searchthrough script), 62(get from script), 63, 64, 65, 66-73, 83-91
+GO THROUGH EVERYTHING WITH CHAT GPT
+CHAT GPT'd/REMEDIATED ONES:
+24(cis), 
+
+IMAGE ATTEMPT ORDER : ZOO, KALIPATRIOT HEIST, APERTURE, BALDIS BASICS, MAYBE KAC?
+
+
+FOR WINDOWS AUTOMATIC UPDATES:
+    reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU /v AutoInstallMinorUpdates /t REG_DWORD /d 1 /f
+    reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU /v NoAutoUpdate /t REG_DWORD /d 0 /f
+    reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU /v AUOptions /t REG_DWORD /d 4 /f
+    reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update" /v AUOptions /t REG_DWORD /d 4 /f
+    reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate /v DisableWindowsUpdateAccess /t REG_DWORD /d 0 /f
+    reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate /v ElevateNonAdmins /t REG_DWORD /d 0 /f
+    reg add HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer /v NoWindowsUpdate /t REG_DWORD /d 0 /f
+    reg add "HKLM\SYSTEM\Internet Communication Management\Internet Communication" /v DisableWindowsUpdateAccess /t REG_DWORD /d 0 /f
+    reg add HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\WindowsUpdate /v DisableWindowsUpdateAccess /t REG_DWORD /d 0 /f
+
+
+
+defender stuff:
+
+Set-MpPreference -AllowDatagramProcessingOnWinServer $False
+Set-MpPreference -AllowNetworkProtectionDownLevel $False
+Set-MpPreference -AllowNetworkProtectionOnWinServer $False
+Set-MpPreference -AllowSwitchToAsyncInspection $False
+Set-MpPreference -AttackSurfaceReductionOnlyExclusions ""
+Set-MpPreference -AttackSurfaceReductionRules_Actions ""
+Set-MpPreference -AttackSurfaceReductionRules_Ids ""
+Set-MpPreference -CheckForSignaturesBeforeRunningScan $False
+Set-MpPreference -CloudBlockLevel 0
+Set-MpPreference -CloudExtendedTimeout 0
+Set-MpPreference -ControlledFolderAccessAllowedApplications ""
+Set-MpPreference -ControlledFolderAccessProtectedFolders ""
+Set-MpPreference -DefinitionUpdatesChannel 0
+Set-MpPreference -DisableArchiveScanning $False
+Set-MpPreference -DisableAutoExclusions $False
+Set-MpPreference -DisableBehaviorMonitoring $False
+Set-MpPreference -DisableBlockAtFirstSeen $False
+Set-MpPreference -DisableCatchupFullScan $True
+Set-MpPreference -DisableCatchupQuickScan $True
+Set-MpPreference -DisableCpuThrottleOnIdleScans $True
+Set-MpPreference -DisableDatagramProcessing $False
+Set-MpPreference -DisableDnsOverTcpParsing $False
+Set-MpPreference -DisableDnsParsing $False
+Set-MpPreference -DisableEmailScanning $True
+Set-MpPreference -DisableFtpParsing $False
+Set-MpPreference -DisableGradualRelease $False
+Set-MpPreference -DisableHttpParsing $False
+Set-MpPreference -DisableInboundConnectionFiltering $False
+Set-MpPreference -DisableIOAVProtection $False
+Set-MpPreference -DisableNetworkProtectionPerfTelemetry $False
+Set-MpPreference -DisablePrivacyMode $False
+Set-MpPreference -DisableRdpParsing $False
+Set-MpPreference -DisableRealtimeMonitoring $False
+Set-MpPreference -DisableRemovableDriveScanning $True
+Set-MpPreference -DisableRestorePoint $True
+Set-MpPreference -DisableScanningMappedNetworkDrivesForFullScan $True
+Set-MpPreference -DisableScanningNetworkFiles $False
+Set-MpPreference -DisableScriptScanning $False
+Set-MpPreference -DisableSshParsing $False
+Set-MpPreference -DisableTDTFeature $False
+Set-MpPreference -DisableTlsParsing $False
+Set-MpPreference -EnableControlledFolderAccess 0
+Set-MpPreference -EnableDnsSinkhole $True
+Set-MpPreference -EnableFileHashComputation $False
+Set-MpPreference -EnableFullScanOnBatteryPower $False
+Set-MpPreference -EnableLowCpuPriority $False
+Set-MpPreference -EnableNetworkProtection 0
+Set-MpPreference -EngineUpdatesChannel 0
+Set-MpPreference -ExclusionExtension ""
+Set-MpPreference -ExclusionIpAddress ""
+Set-MpPreference -ExclusionPath ""
+Set-MpPreference -ExclusionProcess ""
+Set-MpPreference -ForceUseProxyOnly $False
+Set-MpPreference -HighThreatDefaultAction 0
+Set-MpPreference -LowThreatDefaultAction 0
+Set-MpPreference -MAPSReporting 2
+Set-MpPreference -MeteredConnectionUpdates $False
+Set-MpPreference -ModerateThreatDefaultAction 0
+Set-MpPreference -PlatformUpdatesChannel 0
+Set-MpPreference -ProxyBypass ""
+Set-MpPreference -ProxyPacUrl ""
+Set-MpPreference -ProxyServer ""
+Set-MpPreference -PUAProtection 0
+Set-MpPreference -QuarantinePurgeItemsAfterDelay 90
+Set-MpPreference -RandomizeScheduleTaskTimes $True
+Set-MpPreference -RealTimeScanDirection 0
+Set-MpPreference -RemediationScheduleDay 0
+Set-MpPreference -RemediationScheduleTime 020000
+Set-MpPreference -ReportingAdditionalActionTimeOut 10080
+Set-MpPreference -ReportingCriticalFailureTimeOut 10080
+Set-MpPreference -ReportingNonCriticalTimeOut 1440
+Set-MpPreference -ScanAvgCPULoadFactor 50
+Set-MpPreference -ScanOnlyIfIdleEnabled $True
+Set-MpPreference -ScanParameters 1
+Set-MpPreference -ScanPurgeItemsAfterDelay 15
+Set-MpPreference -ScanScheduleDay 0
+Set-MpPreference -ScanScheduleOffset 120
+Set-MpPreference -ScanScheduleQuickScanTime 000000
+Set-MpPreference -ScanScheduleTime 020000
+Set-MpPreference -SchedulerRandomizationTime 4
+Set-MpPreference -ServiceHealthReportInterval 60
+Set-MpPreference -SevereThreatDefaultAction 0
+Set-MpPreference -SharedSignaturesPath ""
+Set-MpPreference -SignatureAuGracePeriod 0
+Set-MpPreference -SignatureBlobFileSharesSources ""
+Set-MpPreference -SignatureBlobUpdateInterval 60
+Set-MpPreference -SignatureDefinitionUpdateFileSharesSources ""
+Set-MpPreference -SignatureDisableUpdateOnStartupWithoutEngine $False
+Set-MpPreference -SignatureFallbackOrder MicrosoftUpdateServer|MMPC
+Set-MpPreference -SignatureFirstAuGracePeriod 120
+Set-MpPreference -SignatureScheduleDay 8
+Set-MpPreference -SignatureScheduleTime 014500
+Set-MpPreference -SignatureUpdateCatchupInterval 1
+Set-MpPreference -SignatureUpdateInterval 0
+Set-MpPreference -SubmitSamplesConsent 1
+Set-MpPreference -ThreatIDDefaultAction_Actions ""
+Set-MpPreference -ThreatIDDefaultAction_Ids ""
+Set-MpPreference -ThrottleForScheduledScanOnly $True
+Set-MpPreference -TrustLabelProtectionStatus 0
+Set-MpPreference -UILockdown False ""
+Set-MpPreference -UnknownThreatDefaultAction 0
+Set-MpPreference -PSComputerName ""
+
+

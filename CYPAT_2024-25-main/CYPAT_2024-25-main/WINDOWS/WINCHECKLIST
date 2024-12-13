@@ -1,0 +1,296 @@
+===========================================================================================================================================================================================
+FORENSICS
+===========================================================================================================================================================================================
+USE CHATGPT IF STUCK
+CYBERCHEF if weird encryption
+Note down file locations/important details/processes/solution into Forensics.txt file in main computer
+Delete any file locations/important details/processes from the forensics
+===========================================================================================================================================================================================
+CHECK FOR PROPER PERMISSIONS
+===========================================================================================================================================================================================
+start downloading updates before anything
+ensure permissions look correct
+ensure you're an admin
+        does admin gruop even exist
+        move to backup operator fallback
+===========================================================================================================================================================================================
+USE COMMON REPAIR TOOLS OFF THE BAT
+===========================================================================================================================================================================================
+RUN MERT : https://github.com/orangegrouptech/Windows-Malware-Effects-Remediation-Tool
+RUN MALWAREBYTES : https://www.malwarebytes.com/mwb-download/thankyou
+USE : DISM /Online /Cleanup-Image /RestoreHealth
+USE : sfc.exe /scannow
+===========================================================================================================================================================================================
+ENSURE THE FOLLOWING SERVICES SHOULD BE ENABLED AS PER BLACKVIPER SETTINGS
+===========================================================================================================================================================================================
+Open elevated shell
+Use (Set-Service -Name <servicename> -StartupType Automatic) and (Start-Service <servicename>) to start services 
+
+Windows Management Instrumentation (WMI): Winmgmt
+Windows Firewall: MpsSvc
+Windows Update Service: wuauserv
+Remote Procedure Call (RPC): RpcSs
+Task Scheduler: Schedule
+Background Intelligent Transfer Service (BITS): BITS
+Microsoft Management Console (MMC) Snap-ins: Not applicable as MMC snap-ins are not services but components.
+Group Policy Client: gpsvc
+Security Accounts Manager (SAM): Not a standalone service; it's part of the Local Security Authority Subsystem Service (lsass.exe).
+System Event Notification Service: SENS
+Cryptographic Services: CryptSvc
+Network List Service: netprofm
+Windows Defender Antivirus Service: WinDefend (Note: This might vary if a different antivirus is in use or if the system is using Windows Defender's newer service names in recent updates.)
+Distributed Link Tracking Client: TrkWks
+DNS Client: Dnscache
+
+Open UP MSCONFIG
+Go to -> Services
+Check Hide Microsoft Services
+Configure any extras (Also might be here : HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services)
+===========================================================================================================================================================================================
+CHECK FOR STARTUP MALICIOUS APPLICATIONS
+===========================================================================================================================================================================================
+HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run and HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run.
+MSINFO32
+TASK MANAGER
+TASK SCHEDULER
+===========================================================================================================================================================================================
+USE EVENT VIEWER Use Event Viewer (eventvwr.msc) can provide logs that might indicate what processes or scripts are being executed at logon.
+===========================================================================================================================================================================================
+    Security Logs
+        These logs can provide information about login attempts, changes to security settings, and other security-related activities. Look for any unusual patterns or entries around the times you suspect Group Policy settings were modified.
+    System Logs
+        System logs contain events logged by the operating system components. These can include system errors, warnings, and informational events, some of which may be related to Group Policy changes.
+    Application Logs
+        These logs hold events logged by applications. If a specific application is responsible for modifying Group Policy settings, you might find relevant entries here.
+    Group Policy Operational Logs
+        Located under "Applications and Services Logs" -> "Microsoft" -> "Windows" -> "GroupPolicy" -> "Operational". This log specifically tracks Group Policy processing and can be very useful in identifying when and how Group Policy was applied or refreshed.
+Event IDs to Look For
+    Event ID 4688: A new process has been created (can help track execution of scripts or programs).
+    Event ID 4738: A user account was changed (might indicate changes in user privileges or settings).
+    Event ID 4720: A user account was created (useful if new accounts are being made for malicious purposes).
+    Event ID 4704: A user right was assigned (can indicate changes in user rights, which could relate to Group Policy changes).
+
+It is possible to detect GPO modifications by monitoring directory service changes using Windows event logs. Several events may be logged for such GPO modifications, including:
+Event ID 5136 Event ID 5137 Event ID 5138 Event ID 5139 Event ID 5141 
+===========================================================================================================================================================================================
+NIRSOFT/SYSINTERNALS TOOLS
+===========================================================================================================================================================================================
+Check for streams in C drive with Nirsoft Alternate Stream Viewer : https://www.nirsoft.net/utils/alternate_data_streams.html
+        To view stream content use the following command in powershell : Get-Content <filename> -Stream <streamname>
+          more < whosthatpokemon-master(1).zip:Zone.Identifier:$DATA
+                [ZoneTransfer]
+                ZoneId=3
+                ReferrerUrl=https://github.com/menardi/whosthatpokemon
+                HostUrl=https://codeload.github.com/Menardi/whosthatpokemon/zip/refs/heads/master
+        By default, Windows flags internet installed applications with a benign metadata stream called Zone.Identifier
+        Stuff with high stream sizes should be investigated
+PROCMON/PROCHACKER and look for stuff : https://learn.microsoft.com/en-us/sysinternals/downloads/procmon
+Clean up remaining things with autoruns : https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns
+AccessEnum and look for important registries
+1. HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run
+
+    Purpose: This key is used to launch programs automatically when a user logs in. Malware often adds entries here to achieve persistence.
+    Check For: Unauthorized or suspicious entries that might indicate malware or unwanted software.
+
+2. HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run
+
+    Purpose: Similar to the above, but specific to the current user.
+    Check For: Unexpected entries that could be launching malware or unnecessary applications at login.
+
+3. HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services
+
+    Purpose: Contains configurations for services that are run by the system.
+    Check For: New or modified service entries, particularly those with unusual names or descriptions, as these can be indicative of rootkits or other stealthy malware types.
+
+4. HKEY_CLASSES_ROOT*\shell\open\command
+
+    Purpose: Determines actions taken when files are opened, often targeted to execute malware when certain files are opened.
+    Check For: Modifications that do not align with known applications or system behaviors.
+
+5. HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon
+
+    Purpose: Manages Windows logon process. Attackers target this to manipulate user authentication processes.
+    Check For: Unauthorized changes in keys like Userinit and Shell, which could redirect the logon process to malicious scripts or programs.
+
+6. HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
+
+    Purpose: Contains various system-level policies, including security settings.
+    Check For: Changes that weaken security, like disabling the lock screen or UAC (User Account Control).
+
+7. HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings
+
+    Purpose: Manages Internet Explorer settings, including proxy configurations.
+    Check For: Unexpected proxy settings that could redirect internet traffic through malicious servers.
+
+8. HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Folder\Hidden\SHOWALL
+
+    Purpose: Controls the visibility of hidden files in Explorer.
+    Check For: Changes that hide files from view, a common trick by malware to remain undetected.
+
+
+ProcHacker replaces need for PsExec(you can also run as system) : https://processhacker.sourceforge.io/downloads.php
+PsExec
+          (you can use CMD OR POWERSHELL but it's just a system-level elevated prompt for commands where you for some reason don't have permissions)
+         ./PsExec.exe -i -s cmd.exe
+          (take control of like anything)
+          takeown /f "C:\Windows\System32\OpenSSH" /r /d y
+          icacls "C:\Windows\System32\OpenSSH" /grant rio:F /t
+          requires $admin share so don't disable LanMan stuff until you don't need it anymore
+Entire SYSINTERNAL SUITE AVAIALBE AT : https://learn.microsoft.com/en-us/sysinternals/downloads/
+
+netstat -ano
+        tcpview (sysinternal)
+===========================================================================================================================================================================================
+Registry/File System/Group Baselining
+===========================================================================================================================================================================================
+Start doing registry baselining
+Compare existing groups with default groups from GROUPS.txt
+===========================================================================================================================================================================================
+SCRIPTS
+===========================================================================================================================================================================================
+It's finally time to run that script huh.
+Install GIT.(if broken just cop the directory download from: https://github.com/simeononsecurity/Standalone-Windows-STIG-Script/tree/master)
+Hop into an elevated shell and navigate to the directory (possibly with system level access)
+Do : Set-ExecutionPolicy Unrestricted -Force
+Create users.txt file in .../CYPAT-main/Windows
+    Format{
+        Authorized Administrators:
+        A
+        B
+        Authorized Users:
+        C
+        D
+    }
+Look at core services and ensure they are enabled in script. Do any last minute tweaks to ensure coverage.
+Go through each module one by one.
+Note any errors that occur.
+Swiftly check that the following effects were changed.
+    Logs are created in C:
+    GPOs were established
+    Automatic Updates are On
+    Firewall Rules Set
+    Settings are Configured
+        (rdp disabled, UAC fully enabled)
+===========================================================================================================================================================================================
+POST SCRIPT AUDITNG
+===========================================================================================================================================================================================
+Restart Computer to ensure changes are all applied
+ensure users are logged off from tank manager
+
+If updates aren't fixed just paste the following registry keys in upon startup:
+     reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU /v AutoInstallMinorUpdates /t REG_DWORD /d 1 /f
+    reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU /v NoAutoUpdate /t REG_DWORD /d 0 /f
+    reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU /v AUOptions /t REG_DWORD /d 4 /f
+    reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update" /v AUOptions /t REG_DWORD /d 4 /f
+    reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate /v DisableWindowsUpdateAccess /t REG_DWORD /d 0 /f
+    reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate /v ElevateNonAdmins /t REG_DWORD /d 0 /f
+    reg add HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer /v NoWindowsUpdate /t REG_DWORD /d 0 /f
+    reg add "HKLM\SYSTEM\Internet Communication Management\Internet Communication" /v DisableWindowsUpdateAccess /t REG_DWORD /d 0 /f
+    reg add HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\WindowsUpdate /v DisableWindowsUpdateAccess /t REG_DWORD /d 0 /f
+
+FIX ANY PROBLEMS THAT OCCURED DURING SCRIPT
+    apps didn’t update
+    apps didn’t uninstall
+    certain settings couldn’t apply
+    couldn’t get logs
+    user mishaps
+
+Go into GPEDIT and import your firewall settings
+Open up file logs alongside everything tools and go through. Scan for any weird extensions, file names, and promptly remove. Look for any remaining applications that evaded the initial scan.
+        Open Everything: Launch the Everything application on your computer.
+                Access Settings: Go to the Tools menu and select Options to open the settings dialog.
+                Modify Index Settings:
+                    Navigate to the Indexes section.
+                    Look for options related to file attributes. Ensure that the Include hidden files and folders and Include system files and folders checkboxes are checked. This tells Everything to index hidden and system files.
+                Rebuild Index:
+                
+                    After changing these settings, you might need to rebuild the index for the changes to take effect.
+                    You can do this by going to the Tools menu and selecting Rebuild Index. Note that rebuilding the index might take some time, depending on the number of files on your system.
+===========================================================================================================================================================================================
+SERVICE/APP SECURITY
+===========================================================================================================================================================================================
+Ensure the "Turn Windows Features On or Off" section looks correct
+    Things to never have on
+        Telnet client\server
+        SNMP
+        RIP Listener
+        Client for NFS
+        Internet Information Services (IIS)
+        World Wide Web Services
+        If FTP sever then turn on TFTP otherwise make sure that it is not checked
+        Disable SMB v1
+        Turn Windows features on or off=Uncheck SMB 1.0/CIFS File Sharing Support
+Ensure that services are in compliance with Black Viper settings from services.msc
+Afterwards, go into MSCONFIG -> Services 
+    Tick hide all microsoft services
+    Re-Do prior unfixed service management
+Start going through configuration files for different applications. If you can't find, with everything tool, ask GPT.
+Enable correct settings using preconfigured files, read me information, google, chatgpt, and logical sense
+    Ensure stuff like automatic updates are enabled
+    Auditing is good and should be on usually
+    Passwords are important and should usually be enabled if possible
+    Encryption is usually a good thing
+Go through browsers settings
+    auto updates
+    ensure that no extensions are installed
+    Cookies/Browsing History is cleared
+    No bookmarks
+===========================================================================================================================================================================================
+FINAL STRETCH
+===========================================================================================================================================================================================
+Ensure all tasks from read me are properly configured. 
+Ensure that everything so far has been done correctly
+Ensure all updates are installed and that updates, firewalls, user auditing, uac, application management is done
+Start mapping vulnerabilities with categories. Target which ever seems to be missing. Especially if any one category has 0.
+Start going through stigs lmao : https://www.stigviewer.com/stig/microsoft_windows_10/
+If still not maxed i don't even know anymore wtf do they want.
+https://support.google.com/chrome/a/answer/187202?hl=en#zippy=%2Cwindows - go through chrome gpo template
+
+
+Ensure following are applied : 
+Network access: Sharing and security model for local
+accounts
+Classic - local users authenticate as themselves
+Network security: Allow Local System to use computer
+identify for NTLM
+Enabled
+Network security: Allow LocalSystem NULL session
+fallback
+Disabled
+Network security: Allow PKU2U authentication requests
+to this computer to use online identities
+Disabled
+Network security: Configure encryption types allowed for
+Kerberos
+Enable RC4HMAC_MD5, AES128_HMAC_SHA1,
+AES256_HMAC_SHA1 and Future Encryption Types
+Network security: Do not store LAN Manager hash value
+on next password change
+Enabled
+Network security: Force logoff when logon hours expire Enabled
+Network security: LAN Manager authentication level Sent NTLMv2 response only. Refuse LM and NTLM.
+Network security: LDAP client signing requirements Negotiate signing
+Network security: Minimum session security for NTLM
+SSP based (including secure RPC) clients
+Require NTLMv2 session security and 128-bit encryption
+Network security: Minimum session security for NTLM
+SSP based (including secure RPC) servers
+Require NTLMv2 session security and 128-bit encryption
+Network security: Restrict NTLM: Add remote servers
+exceptions for NTLM authentication
+Not Defined
+Network security: Restrict NTLM: Add server exceptions
+in this domain
+Not Defined
+Network security: Restrict NTLM: Audit Incoming NTLM
+Traffic
+Enable auditing for all accounts
+Network security: Restrict NTLM: Audit NTLM
+authentication in this domain
+Enable all
+Network security: Restrict NTLM: Incoming NTLM traffic Deny all accounts
+Network security: Restrict NTLM: NTLM authentication in
+this domain
+Deny all
+Network security: Restrict NTLM: Outgoing NTLM traffic
+to remote servers
