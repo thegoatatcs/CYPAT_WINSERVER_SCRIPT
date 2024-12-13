@@ -39,7 +39,7 @@ foreach ($path in $registryPolPaths) {
             Remove-Item -Path $path -Force
             Write-Host "Removed $path" -ForegroundColor Green
         } catch {
-            Write-Host "Failed to remove $path: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "Failed to remove $path $($_.Exception.Message)" -ForegroundColor Red
         }
     }
 }
