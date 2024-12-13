@@ -84,7 +84,7 @@ function Manage-ChocoPackage {
             }
         }
     } catch {
-        Write-Message "Failed to $Action package $PackageName: $_" -Level "ERROR"
+        Write-Message "Failed to $Action package $PackageName $_" -Level "ERROR"
     }
 }
 
