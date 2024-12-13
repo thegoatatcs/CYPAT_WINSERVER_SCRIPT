@@ -104,7 +104,7 @@ function Manage-UserAccount {
             Add-LocalGroupMember -Group "Users" -Member $Username -ErrorAction SilentlyContinue
             Write-Message "User $Username created and added to 'Users' group."
         } catch {
-            Write-Message "Failed to create user $Username: $_" -Level "ERROR"
+            Write-Message "Failed to create user $Username $_" -Level "ERROR"
             return
         }
     }
@@ -119,7 +119,7 @@ function Manage-UserAccount {
             Write-Message "Removed $Username from Administrators group."
         }
     } catch {
-        Write-Message "Failed to modify Administrators group for $Username: $_" -Level "ERROR"
+        Write-Message "Failed to modify Administrators group for $Username $_" -Level "ERROR"
     }
 }
 
